@@ -3,6 +3,7 @@
 all:
 	go build -o server cmd/server/main.go
 	go build -o client cmd/client/main.go
+	go build -o bench cmd/bench/main.go
 
 install-tools:
 	go install \

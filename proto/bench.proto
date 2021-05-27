@@ -14,6 +14,13 @@ service BenchService {
       body: "*"
     };
   }
+
+  rpc Signal(SignalRequest) returns (SignalResponse) {
+    option (google.api.http) = {
+      post: "/api/signal"
+      body: "*"
+    };
+  }
 }
 
 // WatchRequest
@@ -36,4 +43,12 @@ message Event {
   string field2 = 4;
   string field3 = 5;
   string field4 = 6;
+}
+
+// SignalRequest
+message SignalRequest {
+}
+
+// SignalResponse
+message SignalResponse {
 }

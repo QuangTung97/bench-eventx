@@ -55,6 +55,7 @@ func computeEventsForUpdate(events []eventx.Event) []benchEvent {
 }
 
 func (r *repository) GetLastEvents(ctx context.Context, limit uint64) ([]eventx.Event, error) {
+	fmt.Println("GetLastEvents:", limit)
 	query := `
 SELECT t.id, t.seq, t.data FROM (
 	SELECT e.id, s.seq, e.data FROM events e
@@ -72,6 +73,7 @@ SELECT t.id, t.seq, t.data FROM (
 }
 
 func (r *repository) GetUnprocessedEvents(ctx context.Context, limit uint64) ([]eventx.Event, error) {
+	fmt.Println("GetUnprocessedEvents:", time.Now(), limit)
 	query := `
 SELECT e.id, e.data FROM events e
 INNER JOIN event_seqs s ON s.id = e.id
@@ -87,6 +89,7 @@ ORDER BY s.id ASC LIMIT ?
 }
 
 func (r *repository) GetEventsFrom(ctx context.Context, from uint64, limit uint64) ([]eventx.Event, error) {
+	fmt.Println("GetEventsFrom:", from, limit)
 	query := `
 SELECT e.id, e.data FROM events e
 INNER JOIN event_seqs s ON s.id = e.id
@@ -170,6 +173,11 @@ func (s *benchServer) Watch(req *benchpb.WatchRequest, server benchpb.BenchServi
 	}
 }
 
+func (s *benchServer) Signal(_ context.Context, _ *benchpb.SignalRequest) (*benchpb.SignalResponse, error) {
+	s.runner.Signal()
+	return &benchpb.SignalResponse{}, nil
+}
+
 func main() {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
@@ -180,7 +188,8 @@ func main() {
 
 	repo := newRepository(db)
 	runner := eventx.NewRunner(repo,
-		eventx.WithDBProcessorRetryTimer(10*time.Second),
+		eventx.WithDBProcessorRetryTimer(2*time.Minute),
+		eventx.WithLogger(logger),
 	)
 
 	server := grpc.NewServer(
@@ -218,15 +227,15 @@ func startServers(
 	signal.Notify(exit, os.Interrupt, os.Kill)
 
 	httpMux := http.NewServeMux()
-	httpMux.Handle("/api", mux)
 	httpMux.Handle("/metrics", promhttp.Handler())
+	httpMux.Handle("/api/", mux)
 
-	httpServer := http.Server{
-		Addr:    ":10080",
+	httpServer := &http.Server{
+		Addr:    ":8080",
 		Handler: httpMux,
 	}
 
-	fmt.Println("HTTP: localhost:10080")
+	fmt.Println("HTTP: localhost:8080")
 	fmt.Println("gRPC: localhost:10088")
 
 	var wg sync.WaitGroup
@@ -241,7 +250,6 @@ func startServers(
 	go func() {
 		defer wg.Done()
 
-		fmt.Println("Start HTTP")
 		err := httpServer.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			panic(err)

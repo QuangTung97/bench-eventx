@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"io"
+	"time"
 )
 
 func main() {
@@ -31,5 +32,6 @@ func main() {
 			panic(err)
 		}
 		fmt.Println("EVENTS:", events)
+		fmt.Println(time.Now())
 	}
 }
