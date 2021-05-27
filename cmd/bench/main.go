@@ -3,6 +3,7 @@ package main
 import (
 	"bench/benchpb"
 	"context"
+	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -56,8 +57,12 @@ func main() {
 	client := benchpb.NewBenchServiceClient(conn)
 
 	db := sqlx.MustConnect("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true")
-	event := benchEvent{
-		Data: benchEventData,
+
+	events := make([]benchEvent, 0, 1000)
+	for i := 0; i < 1000; i++ {
+		events = append(events, benchEvent{
+			Data: benchEventData,
+		})
 	}
 
 	fmt.Println("BEGIN:", time.Now())
@@ -67,7 +72,7 @@ INSERT INTO events (data)
 VALUES (:data)
 `
 	err = transact(db, func(tx *sqlx.Tx) error {
-		res, err := db.NamedExec(query, event)
+		res, err := db.NamedExec(query, events)
 		if err != nil {
 			return err
 		}
@@ -75,15 +80,31 @@ VALUES (:data)
 		if err != nil {
 			return err
 		}
-		_, err = db.Exec(`INSERT INTO event_seqs (id) VALUES (?)`, id)
+		num, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if int(num) != len(events) {
+			return errors.New("wrong number of events inserted")
+		}
+
+		idVal := uint64(id)
+		for i := range events {
+			events[i].ID = idVal
+			idVal++
+		}
+
+		_, err = db.NamedExec(`INSERT INTO event_seqs (id) VALUES (:id)`, events)
 		return err
 	})
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("COMMIT:", time.Now())
 
 	_, err = client.Signal(context.Background(), &benchpb.SignalRequest{})
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("SIGNALED:", time.Now())
 }

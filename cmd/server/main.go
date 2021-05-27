@@ -91,7 +91,7 @@ ORDER BY s.id ASC LIMIT ?
 func (r *repository) GetEventsFrom(ctx context.Context, from uint64, limit uint64) ([]eventx.Event, error) {
 	fmt.Println("GetEventsFrom:", from, limit)
 	query := `
-SELECT e.id, e.data FROM events e
+SELECT e.id, s.seq, e.data FROM events e
 INNER JOIN event_seqs s ON s.id = e.id
 WHERE s.seq >= ?
 ORDER BY s.seq ASC LIMIT ?
