@@ -49,15 +49,7 @@ func newBenchEventData() string {
 
 var benchEventData = newBenchEventData()
 
-func main() {
-	conn, err := grpc.Dial("localhost:10088", grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	client := benchpb.NewBenchServiceClient(conn)
-
-	db := sqlx.MustConnect("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true")
-
+func insertEvents(db *sqlx.DB, client benchpb.BenchServiceClient) {
 	events := make([]benchEvent, 0, 1000)
 	for i := 0; i < 1000; i++ {
 		events = append(events, benchEvent{
@@ -71,7 +63,7 @@ func main() {
 INSERT INTO events (data)
 VALUES (:data)
 `
-	err = transact(db, func(tx *sqlx.Tx) error {
+	err := transact(db, func(tx *sqlx.Tx) error {
 		res, err := db.NamedExec(query, events)
 		if err != nil {
 			return err
@@ -107,4 +99,18 @@ VALUES (:data)
 		panic(err)
 	}
 	fmt.Println("SIGNALED:", time.Now())
+}
+
+func main() {
+	conn, err := grpc.Dial("localhost:10088", grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	client := benchpb.NewBenchServiceClient(conn)
+
+	db := sqlx.MustConnect("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true")
+
+	for i := 0; i < 10; i++ {
+		insertEvents(db, client)
+	}
 }
