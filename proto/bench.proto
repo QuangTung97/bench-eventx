@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package bench;
+
+import "google/api/annotations.proto";
+
+option go_package = "bench/benchpb;benchpb";
+
+// BenchService ...
+service BenchService {
+  rpc Watch(WatchRequest) returns (stream Events) {
+    option (google.api.http) = {
+      post: "/api/sample"
+      body: "*"
+    };
+  }
+}
+
+// WatchRequest
+message WatchRequest {
+  uint64 from = 1;
+  uint64 limit = 2;
+}
+
+// Events
+message Events {
+  repeated Event events = 1;
+}
+
+// Event
+message Event {
+  uint64 id = 1;
+  uint64 seq = 2;
+
+  string field1 = 3;
+  string field2 = 4;
+  string field3 = 5;
+  string field4 = 6;
+}
