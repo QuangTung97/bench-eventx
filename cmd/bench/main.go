@@ -4,6 +4,7 @@ import (
 	"bench/benchpb"
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"time"
 )
+
+var mysqlHost = flag.String("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true", "MySQL DSN")
 
 type benchEvent struct {
 	ID   uint64 `db:"id"`
@@ -108,7 +111,7 @@ func main() {
 	}
 	client := benchpb.NewBenchServiceClient(conn)
 
-	db := sqlx.MustConnect("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true")
+	db := sqlx.MustConnect("mysql", *mysqlHost)
 
 	for i := 0; i < 10; i++ {
 		insertEvents(db, client)

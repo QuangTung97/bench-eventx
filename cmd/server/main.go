@@ -4,6 +4,7 @@ import (
 	"bench/benchpb"
 	"bench/eventx"
 	"context"
+	"flag"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -20,6 +21,8 @@ import (
 	"sync"
 	"time"
 )
+
+var mysqlHost = flag.String("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true", "MySQL DSN")
 
 type repository struct {
 	db *sqlx.DB
@@ -184,7 +187,7 @@ func main() {
 		panic(err)
 	}
 
-	db := sqlx.MustConnect("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true")
+	db := sqlx.MustConnect("mysql", *mysqlHost)
 
 	repo := newRepository(db)
 	runner := eventx.NewRunner(repo,
