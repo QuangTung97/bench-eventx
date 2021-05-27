@@ -1,4 +1,4 @@
-.PHONY: all install-tools generate
+.PHONY: all install-tools generate lint
 
 all:
 	go build -o server cmd/server/main.go
@@ -20,3 +20,9 @@ generate:
 		--go-grpc_out ../${GENERATED} --go-grpc_opt paths=source_relative \
 		--grpc-gateway_out ../${GENERATED} --grpc-gateway_opt logtostderr=true --grpc-gateway_opt paths=source_relative \
 		bench.proto
+
+lint:
+	go fmt ./...
+	go vet ./...
+	golint ./...
+	errcheck ./...

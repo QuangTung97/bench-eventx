@@ -10,7 +10,7 @@ option go_package = "bench/benchpb;benchpb";
 service BenchService {
   rpc Watch(WatchRequest) returns (stream Events) {
     option (google.api.http) = {
-      post: "/api/sample"
+      post: "/api/watch"
       body: "*"
     };
   }
