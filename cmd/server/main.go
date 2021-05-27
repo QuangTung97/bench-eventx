@@ -182,6 +182,8 @@ func (s *benchServer) Signal(_ context.Context, _ *benchpb.SignalRequest) (*benc
 }
 
 func main() {
+	flag.Parse()
+
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)

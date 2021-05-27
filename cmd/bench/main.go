@@ -105,6 +105,8 @@ VALUES (:data)
 }
 
 func main() {
+	flag.Parse()
+
 	conn, err := grpc.Dial("localhost:10088", grpc.WithInsecure())
 	if err != nil {
 		panic(err)
