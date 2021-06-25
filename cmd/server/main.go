@@ -2,10 +2,10 @@ package main
 
 import (
 	"bench/benchpb"
-	"bench/eventx"
 	"context"
 	"flag"
 	"fmt"
+	"github.com/QuangTung97/eventx"
 	_ "github.com/go-sql-driver/mysql"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 	"net"
 	"net/http"
 	"os"
@@ -165,7 +166,7 @@ func (s *benchServer) Watch(req *benchpb.WatchRequest, server benchpb.BenchServi
 
 		sendEvents := make([]*benchpb.Event, 0, len(events))
 		for _, e := range events {
-			sendEvents = append(sendEvents, e.Event)
+			sendEvents = append(sendEvents, e.(*benchpb.Event))
 		}
 		err = server.Send(&benchpb.Events{
 			Events: sendEvents,
@@ -181,6 +182,21 @@ func (s *benchServer) Signal(_ context.Context, _ *benchpb.SignalRequest) (*benc
 	return &benchpb.SignalResponse{}, nil
 }
 
+func unmarshalEvent(e eventx.Event) proto.Message {
+	event := &benchpb.Event{}
+	err := proto.Unmarshal([]byte(e.Data), event)
+	if err != nil {
+		panic(err)
+	}
+	event.Id = e.ID
+	event.Seq = e.Seq
+	return event
+}
+
+func getSequence(event proto.Message) uint64 {
+	return (event.(*benchpb.Event)).Seq
+}
+
 func main() {
 	flag.Parse()
 
@@ -193,6 +209,7 @@ func main() {
 
 	repo := newRepository(db)
 	runner := eventx.NewRunner(repo,
+		unmarshalEvent, getSequence,
 		eventx.WithDBProcessorRetryTimer(2*time.Minute),
 		eventx.WithLogger(logger),
 	)
