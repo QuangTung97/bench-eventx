@@ -3,7 +3,7 @@ module bench
 go 1.16
 
 require (
-	github.com/QuangTung97/eventx v0.1.0
+	github.com/QuangTung97/eventx v0.2.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0

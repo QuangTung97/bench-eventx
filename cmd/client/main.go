@@ -17,7 +17,7 @@ func main() {
 
 	client := benchpb.NewBenchServiceClient(conn)
 	stream, err := client.Watch(context.Background(), &benchpb.WatchRequest{
-		From:  1,
+		From:  80000,
 		Limit: 512,
 	})
 	if err != nil {

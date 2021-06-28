@@ -149,11 +149,7 @@ func (s *benchServer) Watch(req *benchpb.WatchRequest, server benchpb.BenchServi
 	}
 
 	sub := s.runner.NewSubscriber(from, limit)
-	ctx, cancel := context.WithCancel(server.Context())
-	go func() {
-		<-s.streamCtx.Done()
-		cancel()
-	}()
+	ctx := eventx.MergeContext(server.Context(), s.streamCtx)
 
 	for {
 		events, err := sub.Fetch(ctx)
