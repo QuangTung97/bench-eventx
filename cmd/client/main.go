@@ -17,7 +17,7 @@ func main() {
 
 	client := benchpb.NewBenchServiceClient(conn)
 	stream, err := client.Watch(context.Background(), &benchpb.WatchRequest{
-		From:  80000,
+		From:  100000,
 		Limit: 512,
 	})
 	if err != nil {
@@ -31,7 +31,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("EVENTS:", events)
+		fmt.Println("EVENTS:", events.Events[0].Seq, events.Events[len(events.Events)-1].Seq, len(events.Events))
 		fmt.Println(time.Now())
 	}
 }

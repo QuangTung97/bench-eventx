@@ -25,6 +25,14 @@ import (
 
 var mysqlHost = flag.String("mysql", "root:1@tcp(localhost:3306)/bench?parseTime=true", "MySQL DSN")
 
+type unmarshalledEvent struct {
+	*benchpb.Event
+}
+
+func (e unmarshalledEvent) GetSequence() uint64 {
+	return e.Seq
+}
+
 type repository struct {
 	db *sqlx.DB
 }
@@ -148,7 +156,7 @@ func (s *benchServer) Watch(req *benchpb.WatchRequest, server benchpb.BenchServi
 		limit = 256
 	}
 
-	sub := s.runner.NewSubscriber(from, limit)
+	sub := s.runner.NewSubscriber(from, limit, eventx.WithSubscriberSizeLimit(1000*1000))
 	ctx := eventx.MergeContext(server.Context(), s.streamCtx)
 
 	for {
@@ -162,7 +170,7 @@ func (s *benchServer) Watch(req *benchpb.WatchRequest, server benchpb.BenchServi
 
 		sendEvents := make([]*benchpb.Event, 0, len(events))
 		for _, e := range events {
-			sendEvents = append(sendEvents, e.(*benchpb.Event))
+			sendEvents = append(sendEvents, e.(unmarshalledEvent).Event)
 		}
 		err = server.Send(&benchpb.Events{
 			Events: sendEvents,
@@ -178,7 +186,7 @@ func (s *benchServer) Signal(_ context.Context, _ *benchpb.SignalRequest) (*benc
 	return &benchpb.SignalResponse{}, nil
 }
 
-func unmarshalEvent(e eventx.Event) proto.Message {
+func unmarshalEvent(e eventx.Event) eventx.UnmarshalledEvent {
 	event := &benchpb.Event{}
 	err := proto.Unmarshal([]byte(e.Data), event)
 	if err != nil {
@@ -186,11 +194,9 @@ func unmarshalEvent(e eventx.Event) proto.Message {
 	}
 	event.Id = e.ID
 	event.Seq = e.Seq
-	return event
-}
-
-func getSequence(event proto.Message) uint64 {
-	return (event.(*benchpb.Event)).Seq
+	return unmarshalledEvent{
+		Event: event,
+	}
 }
 
 func main() {
@@ -204,8 +210,7 @@ func main() {
 	db := sqlx.MustConnect("mysql", *mysqlHost)
 
 	repo := newRepository(db)
-	runner := eventx.NewRunner(repo,
-		unmarshalEvent, getSequence,
+	runner := eventx.NewRunner(repo, unmarshalEvent,
 		eventx.WithDBProcessorRetryTimer(2*time.Minute),
 		eventx.WithLogger(logger),
 	)
